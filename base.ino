@@ -19,7 +19,6 @@ void setup(void)
  
   SPI.begin();
   radio.begin();
-  network.begin(/*channel*/ 90, /*node address*/ this_node);
 
   radio.setPALevel(RF24_PA_MAX);          // Potência da transmissão em 0dB ( 1mW )
   radio.setDataRate(RF24_250KBPS);        // O padrão é 1Mbps
