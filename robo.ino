@@ -2,13 +2,25 @@
 #include <RF24.h>
 #include <SPI.h>
 
-#define MAX_PAYLOAD_SIZE 10
+#define MAX_PAYLOAD_SIZE2 10
+#define pino_led 8
+#define pino_potenciometro A0
+
+typedef struct payload_escreve_pino {
+  int pino;
+  boolean valor;
+} payload_escreve_pino;
+
+typedef struct payload_escreve_pino_pwm {
+  int pino;
+  int valor;
+} payload_escreve_pino_pwm;
 
 void trata_msg();
-void escreve_pino_rede(uint16_t endereco, int pino, boolean valor);
-boolean le_pino_rede(uint16_t endereco, int pino);
-void escreve_pwm_pino_rede(uint16_t endereco, int pino, int valor);
-int le_pino_analogico_rede(uint16_t endereco, int pino);
+void escreve_pino(byte* payload);
+void le_pino(byte* payload);
+void escreve_pino_pwm(byte* payload);
+void le_pino_analogico(byte* payload);
 
 RF24 radio(9,10);                // nRF24L01(+) radio attached using Getting Started board 
 RF24Network network(radio);      // Network uses that radio
@@ -30,21 +42,22 @@ void setup(void)
   network.begin(/*channel*/ 90, /*node address*/ 01);
 
   // Habilita interrupção no pino 2 do Arduino
-  attachInterrupt(0, trata_msg, FALLING);
+  attachInterrupt(digitalPinToInterrupt(2), trata_msg, FALLING);
+
+  pinMode(pino_led, OUTPUT);
+  pinMode(pino_potenciometro, INPUT);
 }
 void loop(void){
-  
-  network.update();                  // Check the network regularly
-    
-  
+  network.update();                  // Check the network regularly  
+  // mensagens recebidas sao tratadas com interrupcoes
 }
 
-void_trata_msg() {
+void trata_msg() {
   RF24NetworkHeader header;
-  byte[MAX_PAYLOAD_SIZE] payload;
+  byte payload[MAX_PAYLOAD_SIZE2];
 
   while (network.available()) {
-    network.read(header, payload, MAX_PAYLOAD_SIZE);
+    network.read(header, payload, MAX_PAYLOAD_SIZE2);
     
     if (header.type == 1)
       escreve_pino(payload);
@@ -55,18 +68,12 @@ void_trata_msg() {
     else if (header.type == 4)
       le_pino_analogico(payload);
     else
-      serial.println("tipo nao reconhecido");
+      Serial.println("tipo nao reconhecido");
   }
 }
 
 void escreve_pino(byte* payload) {
-
-  struct payload {
-    int pino;
-    boolean valor;
-  };
-
-  digitalWrite((struct payload*) payload->pino, (struct payload*) payload->valor);
+  digitalWrite(((payload_escreve_pino*) payload)->pino, ((payload_escreve_pino*) payload)->valor);
 }
 
 void le_pino(byte* payload) {
@@ -75,33 +82,19 @@ void le_pino(byte* payload) {
 
   leitura = digitalRead((int)*payload);
 
-  bool ok = network.write(header,&leitura,sizeof(boolean));
-  
-  if (!ok) {
-    serial.print("falha ao enviar leitura de pino");
-    return -1;
-  }
+  network.write(header,&leitura,sizeof(boolean));
 }
 
 void escreve_pino_pwm(byte* payload) {
-  struct payload {
-    int pino;
-    int valor;
-  };
 
-  analogWrite((struct payload*) payload->pino, (struct payload*) payload->valor);
+  analogWrite(((payload_escreve_pino_pwm*)payload)->pino, ((payload_escreve_pino_pwm*)payload)->valor);
 }
 
-void le_pino_analogico(uint16_t endereco, int pino) {
+void le_pino_analogico(byte* payload) {
   RF24NetworkHeader header(00, 4);
   int leitura;
 
   leitura = analogRead((int)*payload);
 
-  bool ok = network.write(header,&leitura,sizeof(int));
-  
-  if (!ok) {
-    serial.print("falha ao enviar leitura pwm de pino");
-    return -1;
-  }
+  network.write(header,&leitura,sizeof(int));
 }
