@@ -1,234 +1,201 @@
 #include <RF24Network.h>
 #include <RF24.h>
 #include <SPI.h>
+#include "protocoloRobo.h"
 
-#define TIMEOUT 100
-#define pino_led 8
-#define pino_potenciometro A0
+#define TIMEOUT 10000
 
-void escreve_pino_rede(uint16_t endereco, int pino, boolean valor);
-int le_pino_rede(uint16_t endereco, int pino);
-void escreve_pwm_pino_rede(uint16_t endereco, int pino, int valor);
-int le_pino_analogico_rede(uint16_t endereco, int pino);
-unsigned long ping(uint16_t endereco);
+RF24 radio(9, 10); // radio ligado nos pinos 9 e 10
+RF24Network network(radio);
 
-RF24 radio(9,10);                // nRF24L01(+) radio attached using Getting Started board 
-RF24Network network(radio);      // Network uses that radio
+void verificaRadio();
+void trataMensagens();
 
-void setup(void)
-{
-  Serial.begin(9600);
-  Serial.setTimeout(10);
-  Serial.println("iniciando execucao da base");
- 
+uint16_t enderecoRobo = 01;
+uint16_t enderecoBase = 00;
+
+RadioBuffer radioReadBuffer;
+
+void setup(void) {
+  Serial.begin(57600);
+  Serial.println("Executando Base");
+  Serial.setTimeout(20);
+
   SPI.begin();
   radio.begin();
 
-  radio.setPALevel(RF24_PA_MAX);          // Potência da transmissão em 0dB ( 1mW )
-  radio.setDataRate(RF24_250KBPS);        // O padrão é 1Mbps
-  radio.setCRCLength(RF24_CRC_16);        // Comprimento do CRC: 8 ou 16 bits
-  radio.enableDynamicPayloads();          // Habilita mensagens de tamanho dinâmico
-  radio.maskIRQ(1,1,1);                   // Interrupção desabilitada
+  //radio.IRQMask(1,1,0) // interrupcao de recebimento de mensagem ativada
+  //attachInterrupt(digitalPinToInterrupt(2), trataMensagens, FALLING);
+  //attachInterrupt(0, trataMensagens, FALLING);
 
-  network.begin(/*channel*/ 90, /*node address*/ 00);
+  network.begin(/*channel*/ 90, /*node address*/ enderecoBase);
+
+  delay(10);
+  RF24NetworkHeader header(enderecoRobo,Ping);
+  network.write(header, NULL, 0);
 }
-void loop(void){
-  network.update();                  // Check the network regularly
 
-  Serial.println("loop");
-  while (Serial.available() == 0);
-  int test = Serial.parseInt();
-  Serial.println(test);
-  switch (test) {
-    case 1 :// testa escrita digital
+  void loop() {
+    network.update();
+    trataSerial();
+    //verificaRadio();
+  }
+
+void verificaRadio() {
+  static RF24NetworkHeader header;
+  static byte msg[TAM_MAX_MSG];
+  network.update(); // necessario para network funcionar corretamente
+  while (network.available())
+  {
+    if (radioReadBuffer.isFull())
+      return;
+    network.read(header, msg, TAM_MAX_MSG);
+    //radioReadBuffer.write(header, msg);
+    network.update();
+  }
+}
+
+void trataSerial() {
+  int tipo;
+  static RF24NetworkHeader header(enderecoRobo, 0);
+
+  if (Serial.available() > 0) {
+    tipo = Serial.parseInt(); // recebe o tipo da mensagem
+    Serial.println(tipo);
+
+    switch (tipo) {
+    case EscrevePino:
       {
-      for (int i = 0; i < 2; i++) {
-        escreve_pino_rede(01, pino_led, HIGH);
-        delay(500);
-        escreve_pino_rede(01, pino_led, LOW);
-        delay(500);
+        payloadEscrevePino msg;
+        int pino = Serial.parseInt();
+        int estado = Serial.parseInt();
+        msg.pino = (uint8_t)pino;
+        msg.estado = estado == 1;
+        header.type = EscrevePino;
+        if (!network.write(header, &msg, TAM_MAX_MSG))
+          Serial.println("Falha ao escrever no pino");
       }
       break;
-      }
-    case 2 : // testa leitura digital
+    case EscrevePwm:
       {
-      boolean val = le_pino_rede(01, pino_potenciometro);
-      if (val == HIGH)
-        Serial.println("HIGH");
-      else
-        Serial.println("LOW");
-      break;
-      }
-    case 3 : // testa escrita pwm
-      {
-      int brightness = 0;
-      for (int i = 0; i < 1024; i++) {
-        escreve_pwm_pino_rede(01, pino_led, brightness);
-        brightness = (brightness + 5)%256;
-        delay(30);
+        payloadEscrevePwm msg;
+        int pino = Serial.parseInt();
+        int pwm = Serial.parseInt();
+        msg.pino = (uint8_t)pino;
+        msg.pwm = (uint8_t)pwm;
+        header.type = EscrevePwm;
+        if (!network.write(header, &msg, TAM_MAX_MSG))
+          Serial.println("Falha ao escrever no pino");
       }
       break;
-      }
-    case 4 : // testa leitura analogica
+    case MotorDirecaoPwm:
+      break;
+    case MotorDirecaoVelocidade:
+      break;
+    case MotorDirecaoDistancia:
+      break;
+    case EscreveConfiguracao:
+      break;
+    case Ping:
       {
-      unsigned long time = millis();
-      while (millis() - time < 5000) {
-        Serial.println(le_pino_analogico_rede(01, pino_potenciometro));
+        header.type = Ping;
+        unsigned long time = micros();
+        if (!network.write(header, NULL, 0))
+          Serial.println("Falha no ping");
+        // ACK automatico
+        Serial.print("ping = ");
+        Serial.println(micros() - time);
       }
       break;
-      }
-    case 65 : // testa perda de pacotes
+    case Echo:
       {
-      int count = 0;
-      unsigned long latencia, latencia_media = 0;
-      Serial.println("iniciando teste de perda de pacotes");
-      for (int i = 0; i < 1000; i++) {
-        Serial.print(i);
-        latencia = ping(01);
-        if (latencia == 0)
-          count++;
-        latencia_media += latencia;
-      }
-      latencia_media = latencia_media/(1000 - count);
-      Serial.print("pacotes perdidos: ");
-      Serial.println(count);
-      Serial.print("latencia media: ");
-      Serial.println(latencia_media);
-      break;
-      }
-    case -1 : // teste leitura analogica e escrita pwm
-      {
-      unsigned long time = millis();
-      while (millis() - time < 5000) {
-        int valor = le_pino_analogico_rede(01, pino_potenciometro);
-        escreve_pwm_pino_rede(01, pino_led, valor);
+        char msg[256];
+        int size = Serial.readBytesUntil('\0', msg, 256);
+        msg[size] = '\0';
+        size++;
+        header.type = Echo;
+        if (!network.write(header, msg, size))
+          Serial.println("Falha no echo");
+        if (!leRadio(&msg)) {
+          Serial.println("Nao recebeu echo");
+          break;
+        }
+        Serial.print("Echo: ");
+        Serial.println(msg);
+        break;
       }
       break;
-      }
-    case -2 :  // teste 65, com 3 radios ao mesmo tempo
+    case softwareReset:
       {
-      int count1, count2, count3;
-      unsigned long latencia, latencia_media1, latencia_media2, latencia_media3;
-      count1 = count2 = count3 = 0;
-      latencia_media1 = latencia_media2 = latencia_media3 = 0;
-      for (int i = 0; i < 1000; i++) {
-        latencia = ping(01);
-        if (latencia == 0)
-          count1++;
-        latencia_media1 += latencia;
-  
-        latencia = ping(02);
-        if (latencia == 0)
-          count2++;
-        latencia_media2 += latencia;
-  
-        latencia = ping(03);
-        if (latencia == 0)
-          count3++;
-        latencia_media3 += latencia;
+        header.type = softwareReset;
+        if (!network.write(header, NULL, 0))
+          Serial.println("Falha no reset");
       }
-      latencia_media1 = latencia_media1/(1000 - count1);
-      Serial.print("pacotes perdidos: ");
-      Serial.println(count1);
-      Serial.print("latencia media: ");
-      Serial.println(latencia_media1);
-      latencia_media2 = latencia_media2/(1000 - count2);
-      Serial.print("pacotes perdidos: ");
-      Serial.println(count2);
-      Serial.print("latencia media: ");
-      Serial.println(latencia_media2);
-      latencia_media3 = latencia_media3/(1000 - count3);
-      Serial.print("pacotes perdidos: ");
-      Serial.println(count3);
-      Serial.print("latencia media: ");
-      Serial.println(latencia_media3);
       break;
+    case LeituraPino:
+      {
+        payloadLeituraPino msg;
+        int pino = Serial.parseInt();
+        msg.pino = (uint8_t)pino;
+        header.type = LeituraPino;
+        if (!network.write(header, &msg, TAM_MAX_MSG))
+          Serial.println("Falha ao ler pino");
+        if (!leRadio(&msg)) {
+          Serial.println("Nao recebeu leitura do pino");
+          break;
+        }
+        Serial.print("pino ");
+        Serial.print(pino);
+        Serial.print(": ");
+        Serial.println(msg.estado);
+        break;
       }
+      break;
+    case LeituraAnalogica:
+      {
+        payloadLeituraAnalogica msg;
+        int pino = Serial.parseInt();
+        msg.pino = (uint8_t)pino;
+        header.type = LeituraAnalogica;
+        if (!network.write(header, &msg, TAM_MAX_MSG))
+          Serial.println("Falha ao ler pino");
+        if (!leRadio(&msg)) {
+          Serial.println("Nao recebeu leitura do pino");
+          break;
+        }
+        Serial.print("pino ");
+        Serial.print(pino);
+        Serial.print(": ");
+        Serial.println(msg.estado);
+        break;
+      }
+      break;
+    case LeituraVelocidade:
+      break;
+    case LeituraEncoder:
+      break;
+    case LeituraConfiguracao:
+      break;
     default:
-      Serial.println("comando invalido");
-  }
-}
-
-void escreve_pino_rede(uint16_t endereco, int pino, boolean valor) {
-  RF24NetworkHeader header(endereco, 1);
-
-  struct payload {
-    int pino;
-    boolean valor;
-  } payload = {pino, valor};
-
-  network.write(header,&payload,sizeof(payload));
-}
-
-int le_pino_rede(uint16_t endereco, int pino) {
-  RF24NetworkHeader header(endereco, 2);
-  boolean leitura;
-  unsigned long tempo;
-
-  network.write(header,&pino,sizeof(int));
-  
-  tempo = millis();
-  while (!network.available()) {
-    if (millis() - tempo > TIMEOUT) {
-      return -1;
-      Serial.println("falha ao receber leitura de pino");
+      // mensgaem nao reconhecida
+      break;
     }
   }
-
-  network.read(header, &leitura, sizeof(boolean));
-  
-  if (leitura == HIGH)
-    return 1;
-  else
-    return 0;
 }
 
-void escreve_pwm_pino_rede(uint16_t endereco, int pino, int valor) {
-  RF24NetworkHeader header(endereco, 3);
-
-  struct payload {
-    int pino;
-    int valor;
-  } payload = {pino, valor};
-
-  network.write(header,&payload,sizeof(payload));
-}
-
-int le_pino_analogico_rede(uint16_t endereco, int pino) {
-  RF24NetworkHeader header(endereco, 4);
-  boolean leitura;
-  unsigned long tempo;
-
-  network.write(header,&pino,sizeof(int));
-
-  tempo = millis();
-  while (!network.available()) {
-    if (millis() - tempo > TIMEOUT) {
-      return -1;
-      Serial.println("falha ao receber leitura de pino");
+bool leRadio(void* msg) {
+  int time = micros();
+  while (micros() - time <= TIMEOUT) {
+    network.update();
+    if (network.available()) {
+      RF24NetworkHeader header;
+      if (!network.read(header, &msg, TAM_MAX_MSG)) {
+        Serial.println("falha na leitura do radio");
+        return false;
+      }
+      return true;
     }
   }
-
-  network.read(header, &leitura, sizeof(boolean));
-  
-  if (leitura == HIGH)
-    return 1;
-  else
-    return 0;
-}
-
-unsigned long ping(uint16_t endereco) {
-  RF24NetworkHeader header(endereco, 65);
-  unsigned long time;
-  bool ack;
-  Serial.print(" ping ");
-  time = micros();
-  ack = network.write(header,NULL,0);
-  if (ack == true) {
-    Serial.println(micros() - time);
-    return micros() - time;
-  } else {
-    Serial.println("falhou");
-    return 0;
-  }
+  Serial.println("TIMEOUT");
+  return (false);
 }

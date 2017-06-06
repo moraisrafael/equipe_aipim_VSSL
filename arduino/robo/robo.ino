@@ -7,7 +7,7 @@
 RF24 radio(9, 10); // radio ligado nos pinos 9 e 10
 RF24Network network(radio);
 
-void verificaRadio();
+void verificaRadio(); // colocar com interrupcao por tempo
 void trataMensagens();
 void movimentaRobo();
 
@@ -31,7 +31,7 @@ void loop() {
   movimentaRobo();
 }
 
-void verifica_radio() {
+void verificaRadio() {
   static RF24NetworkHeader header;
   static byte msg[TAM_MAX_MSG];
   network.update(); // necessario para network funcionar corretamente
@@ -47,7 +47,7 @@ void verifica_radio() {
 
 //typedef int payloadEscrevePino;
 
-void trata_mensagens() {
+void trataMensagens() {
   static uint8_t tipo;
   byte msg[TAM_MAX_MSG];
   static RF24NetworkHeader header(enderecoBase, 0);
@@ -55,49 +55,56 @@ void trata_mensagens() {
   while (radioReadBuffer.available()) {
     radioReadBuffer.read(tipo, msg);
     switch (tipo) {
-      case EscrevePino:
-        digitalWrite(((payloadEscrevePino*)msg)->pino, ((payloadEscrevePino*)msg)->estado);
-        break;
-      case EscrevePwm:
-        analogWrite(((payloadEscrevePwm*)msg)->pino, ((payloadEscrevePwm*)msg)->pwm);
-        break;
-      case MotorDirecaoPwm:
-        break;
-      case MotorDirecaoVelocidade:
-        break;
-      case MotorDirecaoDistancia:
-        break;
-      case EscreveConfiguracao:
-        break;
-      case Ping:
-        // ACK automatico
-        break;
-      case Echo:
-        header.type = Echo;
-        network.write(header, msg, TAM_MAX_MSG);
-        break;
-      case softwareReset:
-        // reset();
-        break;
-      case LeituraPino:
-        header.type = LeituraPino;
-        ((payloadLeituraPino*)msg)->estado = digitalRead(((payloadLeituraPino*)msg)->pino);
-        network.write(header, msg, sizeof(payloadLeituraPino));
-        break;
-      case LeituraAnalogica:
-        header.type = LeituraPino;
-        ((payloadLeituraAnalogica*)msg)->estado = analogRead(((payloadLeituraAnalogica*)msg)->pino);
-        network.write(header, msg, sizeof(payloadLeituraPino));
-        break;
-      case LeituraVelocidade:
-        break;
-      case LeituraEncoder:
-        break;
-      case LeituraConfiguracao:
-        break;
-      default:
-        // mensgaem nao reconhecida
-        break;
+    case EscrevePino:
+      {
+        int pino = ((payloadEscrevePino*)msg)->pino;
+        bool estado = ((payloadEscrevePino*)msg)->estado;
+        if (estado == 0)
+          digitalWrite(pino,LOW);
+        else
+          digitalWrite(pino,HIGH);
+      }
+      break;
+    case EscrevePwm:
+      analogWrite(((payloadEscrevePwm*)msg)->pino, ((payloadEscrevePwm*)msg)->pwm);
+      break;
+    case MotorDirecaoPwm:
+      break;
+    case MotorDirecaoVelocidade:
+      break;
+    case MotorDirecaoDistancia:
+      break;
+    case EscreveConfiguracao:
+      break;
+    case Ping:
+      // ACK automatico
+      break;
+    case Echo:
+      header.type = Echo;
+      network.write(header, msg, TAM_MAX_MSG);
+      break;
+    case softwareReset:
+      // reset();
+      break;
+    case LeituraPino:
+      header.type = LeituraPino;
+      ((payloadLeituraPino*)msg)->estado = digitalRead(((payloadLeituraPino*)msg)->pino);
+      network.write(header, msg, sizeof(payloadLeituraPino));
+      break;
+    case LeituraAnalogica:
+      header.type = LeituraPino;
+      ((payloadLeituraAnalogica*)msg)->estado = analogRead(((payloadLeituraAnalogica*)msg)->pino);
+      network.write(header, msg, sizeof(payloadLeituraPino));
+      break;
+    case LeituraVelocidade:
+      break;
+    case LeituraEncoder:
+      break;
+    case LeituraConfiguracao:
+      break;
+    default:
+      // mensgaem nao reconhecida
+      break;
     }
   }
 }
@@ -105,3 +112,4 @@ void trata_mensagens() {
 void movimentaRobo() {
 
 }
+
