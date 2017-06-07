@@ -3,7 +3,7 @@
 #include <SPI.h>
 #include "protocoloRobo.h"
 
-#define TIMEOUT 10000
+#define TIMEOUT 1000
 
 RF24 radio(9, 10); // radio ligado nos pinos 9 e 10
 RF24Network network(radio);
@@ -116,13 +116,19 @@ void trataSerial() {
         header.type = Echo;
         if (!network.write(header, msg, size))
           Serial.println("Falha no echo");
-        if (!leRadio(&msg)) {
-          Serial.println("Nao recebeu echo");
-          break;
+        int time = millis();
+        while (millis() - time <= TIMEOUT) {
+          network.update();
+          if (network.available()) {
+            RF24NetworkHeader header2;
+            network.read(header2, msg, size);
+            Serial.print("Echo: ");
+            Serial.println(msg);
+            break;
+          }
         }
-        Serial.print("Echo: ");
-        Serial.println(msg);
-        break;
+        if (millis() - time >= TIMEOUT)
+          Serial.println("TIMEOUT");
       }
       break;
     case softwareReset:
@@ -140,15 +146,21 @@ void trataSerial() {
         header.type = LeituraPino;
         if (!network.write(header, &msg, TAM_MAX_MSG))
           Serial.println("Falha ao ler pino");
-        if (!leRadio(&msg)) {
-          Serial.println("Nao recebeu leitura do pino");
-          break;
+        int time = millis();
+        while (millis() - time <= TIMEOUT) {
+          network.update();
+          if (network.available()) {
+            RF24NetworkHeader header2;
+            network.read(header2, &msg, TAM_MAX_MSG);
+            Serial.print("pino ");
+            Serial.print(pino);
+            Serial.print(": ");
+            Serial.println(msg.estado);
+            break;
+          }
         }
-        Serial.print("pino ");
-        Serial.print(pino);
-        Serial.print(": ");
-        Serial.println(msg.estado);
-        break;
+        if (millis() - time >= TIMEOUT)
+          Serial.println("TIMEOUT");
       }
       break;
     case LeituraAnalogica:
@@ -159,15 +171,21 @@ void trataSerial() {
         header.type = LeituraAnalogica;
         if (!network.write(header, &msg, TAM_MAX_MSG))
           Serial.println("Falha ao ler pino");
-        if (!leRadio(&msg)) {
-          Serial.println("Nao recebeu leitura do pino");
-          break;
+        int time = millis();
+        while (millis() - time <= TIMEOUT) {
+          network.update();
+          if (network.available()) {
+            RF24NetworkHeader header2;
+            network.read(header2, &msg, TAM_MAX_MSG);
+            Serial.print("pino ");
+            Serial.print(pino);
+            Serial.print(": ");
+            Serial.println(msg.estado);
+            break;
+          }
         }
-        Serial.print("pino ");
-        Serial.print(pino);
-        Serial.print(": ");
-        Serial.println(msg.estado);
-        break;
+        if (millis() - time >= TIMEOUT)
+          Serial.println("TIMEOUT");
       }
       break;
     case LeituraVelocidade:
@@ -183,19 +201,3 @@ void trataSerial() {
   }
 }
 
-bool leRadio(void* msg) {
-  int time = micros();
-  while (micros() - time <= TIMEOUT) {
-    network.update();
-    if (network.available()) {
-      RF24NetworkHeader header;
-      if (!network.read(header, &msg, TAM_MAX_MSG)) {
-        Serial.println("falha na leitura do radio");
-        return false;
-      }
-      return true;
-    }
-  }
-  Serial.println("TIMEOUT");
-  return (false);
-}
