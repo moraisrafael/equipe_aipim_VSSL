@@ -8,9 +8,11 @@ class Encoder
   public:
   	unsigned long tempo[ENCODER_BUFFER_SIZE];
 	int count;    
-    Encoder();
+	Encoder();
     void update();
-    int rpm();
+    float rpm();
+    int lastRead();
+    unsigned long lastv, actv;
   private:
     int ultimo;
 	unsigned long ultimo_tempo;

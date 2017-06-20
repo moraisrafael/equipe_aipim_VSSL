@@ -8,10 +8,10 @@
 #include "roda.h"
 
 Roda RodaEsquerda(MTR_AIN1, MTR_AIN2, MTR_PWMA);
-Roda RodaDireita(MTR_BIN1, MTR_BIN2, MTR_PWMB);
+Roda RodaDireita(MTR_BIN2, MTR_BIN1, MTR_PWMB);
 
-RF24 radio(9, 10); // radio ligado nos pinos 9 e 10
-RF24Network network(radio);
+//RF24 radio(8, 7); 
+//RF24Network network(radio);
 
 void verificaRadio(); // colocar com interrupcao por tempo
 void trataMensagens();
@@ -35,28 +35,46 @@ void setup(void) {
   pinMode(MTR_BIN2, OUTPUT);
   pinMode(MTR_PWMA, OUTPUT);
   pinMode(MTR_PWMB, OUTPUT);
-
-  attachInterrupt(IRQ_ENC_A, updateEsquerda, FALLING);
-  attachInterrupt(IRQ_ENC_B, updateDireita, FALLING);
+  
+  attachInterrupt(0, updateEsquerda, FALLING);
+  attachInterrupt(1, updateDireita, FALLING);
 
   SPI.begin();
-  radio.begin();
-  network.begin(/*channel*/ 90, /*node address*/ enderecoRobo);
+  //radio.begin();
+  //network.begin(/*channel*/ 90, /*node address*/ enderecoRobo);
+
+  RodaEsquerda.Setpoint = 15;
+  RodaDireita.Setpoint = 15;
+
+
 }
 
 void loop() {
-  verificaRadio();
-  trataMensagens();
-  movimentaRobo();
+  //verificaRadio();
+  //trataMensagens();
+  //movimentaRobo();
+
+  digitalWrite(MTR_AIN1, HIGH);
+  digitalWrite(MTR_AIN2, LOW);
+  digitalWrite(MTR_BIN1, LOW);
+  digitalWrite(MTR_BIN2, HIGH);
+  //analogWrite(MTR_PWMA, 10);
+  //analogWrite(MTR_PWMB, 10);
 }
 
 void updateEsquerda(){
+  noInterrupts();
   RodaEsquerda.encoder.update();
+  RodaDireita.movimenta();
+  interrupts();
 }
 void updateDireita(){
+  noInterrupts();
   RodaDireita.encoder.update();
+  RodaEsquerda.movimenta();
+  interrupts();
 }
-
+/*
 void verificaRadio() {
   static RF24NetworkHeader header;
   static byte msg[TAM_MAX_MSG];
@@ -140,7 +158,10 @@ void trataMensagens() {
 }
 
 void movimentaRobo() {
-  RodaDireita.movimenta();
-  RodaEsquerda.movimenta();
+  //RodaDireita.movimenta();
+  //RodaEsquerda.movimenta();
+  //Serial.println(RodaEsquerda.encoder.lastRead());
+  //Serial.println(RodaEsquerda.encoder.lastRead());
 }
 
+*/

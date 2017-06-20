@@ -15,11 +15,11 @@ void Roda::movimenta(){
 
 	if (dir == 1)
 	{
-		digitalWrite(_dirPinA, HIGH);
-    	digitalWrite(_dirPinB, LOW);
+		//digitalWrite(_dirPinA, HIGH);
+    	//digitalWrite(_dirPinB, LOW);
 	} else {
-		digitalWrite(_dirPinA, LOW);
-    	digitalWrite(_dirPinB, HIGH);
+		//digitalWrite(_dirPinA, LOW);
+    	//digitalWrite(_dirPinB, HIGH);
 	}
 
 	if (_ultimorpm == 0)
@@ -32,4 +32,6 @@ void Roda::movimenta(){
 		_ultimopwm = (_ultimopwm * Output) / Input;
 		_ultimorpm = Output;
 	}
+
+	Serial.println(_ultimopwm);
 }

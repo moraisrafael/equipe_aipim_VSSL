@@ -1,9 +1,9 @@
 #ifndef roda_h
 #define roda_h
 #define ENCODER_BUFFER_SIZE 64
-#define Kp 2
-#define Ki 5
-#define Kd 1
+#define Kp 0.2
+#define Ki 0.5
+#define Kd 0.1
 
 #include "Arduino.h"
 #include "encoder.h"
