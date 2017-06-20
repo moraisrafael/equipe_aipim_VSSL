@@ -1,8 +1,14 @@
+#include <PID_v1.h>
 #include <RF24Network.h>
 #include <RF24.h>
 #include <SPI.h>
 #include "protocoloRobo.h"
+#include "encoder.h"
+#include "pins.h"
+#include "roda.h"
 
+Roda RodaEsquerda(MTR_AIN1, MTR_AIN2, MTR_PWMA);
+Roda RodaDireita(MTR_BIN1, MTR_BIN2, MTR_PWMB);
 
 RF24 radio(9, 10); // radio ligado nos pinos 9 e 10
 RF24Network network(radio);
@@ -19,6 +25,12 @@ RadioBuffer radioReadBuffer;
 void setup(void) {
   Serial.begin(57600);
   Serial.println("Executando Robo");
+  
+  pinMode(IRQ_ENC_A, INPUT);
+  pinMode(IRQ_ENC_B, INPUT);
+
+  attachInterrupt(IRQ_ENC_A, updateEsquerda, FALLING);
+  attachInterrupt(IRQ_ENC_B, updateDireita, FALLING);
 
   SPI.begin();
   radio.begin();
@@ -29,6 +41,13 @@ void loop() {
   verificaRadio();
   trataMensagens();
   movimentaRobo();
+}
+
+void updateEsquerda(){
+  RodaEsquerda.encoder.update();
+}
+void updateDireita(){
+  RodaDireita.encoder.update();
 }
 
 void verificaRadio() {
@@ -71,6 +90,10 @@ void trataMensagens() {
     case MotorDirecaoPwm:
       break;
     case MotorDirecaoVelocidade:
+      RodaDireita.dir = ((payloadLeituraVelocidade*)msg)->direcao;
+      RodaEsquerda.dir = ((payloadLeituraVelocidade*)msg)->direcao;
+      RodaDireita.Setpoint = ((payloadLeituraVelocidade*)msg)->velocidadeDireita;
+      RodaEsquerda.Setpoint = ((payloadLeituraVelocidade*)msg)->velocidadeEsquerda;
       break;
     case MotorDirecaoDistancia:
       break;
@@ -110,6 +133,7 @@ void trataMensagens() {
 }
 
 void movimentaRobo() {
-
+  RodaDireita.movimenta();
+  RodaEsquerda.movimenta();
 }
 
