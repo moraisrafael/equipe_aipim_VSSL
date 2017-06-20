@@ -29,6 +29,13 @@ void setup(void) {
   pinMode(IRQ_ENC_A, INPUT);
   pinMode(IRQ_ENC_B, INPUT);
 
+  pinMode(MTR_AIN1, OUTPUT);
+  pinMode(MTR_AIN2, OUTPUT);
+  pinMode(MTR_BIN1, OUTPUT);
+  pinMode(MTR_BIN2, OUTPUT);
+  pinMode(MTR_PWMA, OUTPUT);
+  pinMode(MTR_PWMB, OUTPUT);
+
   attachInterrupt(IRQ_ENC_A, updateEsquerda, FALLING);
   attachInterrupt(IRQ_ENC_B, updateDireita, FALLING);
 
