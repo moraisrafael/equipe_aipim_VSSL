@@ -25,7 +25,7 @@ color = {
 # here are some default values.
 hsv_color = {
     'yellow': 60,
-    'blue': 115,
+    'blue': 233,
     'red': 0,
 }
 
@@ -37,7 +37,7 @@ def get_boundaries_from_HSV_range(color, range):
     """
 
     lower = np.array([color, 33, 33], dtype='int16')
-    upper = np.array([color, 200, 200], dtype='int16')
+    upper = np.array[(color, 255, 255], dtype='int16')
 
     lower[0] = np.clip(lower[0], 0, 179)
     upper[0] = np.clip(upper[0], 0, 179)
@@ -59,7 +59,7 @@ def get_boundaries_from_BRG_range(color, upper, lower):
 
 def main():
     pts = deque(maxlen=BUFFER_SIZE)
-    camera = cv2.VideoCapture(0)
+    camera = cv2.VideoCapture(sys.argv[1])
 
     while True:
         (grabbed, frame) = camera.read()
@@ -69,13 +69,13 @@ def main():
         
         # resize frame, and convert it to HSV
         frame = imutils.resize(frame, width=600)
-        # hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-        lower, upper = get_boundaries_from_BRG_range(color['red'], 50, 50)
-        mask = cv2.inRange(frame, lower, upper)
+        lower, upper = get_boundaries_from_HSV_range(hsv_color, 20)
 
-        mask = cv2.dilate(mask, None, iterations=3)
-        mask = cv2.erode(mask, None, iterations=3)
+        mask = cv2.inRange(hsv, lower, upper)
+        mask = cv2.erode(mask, None, iterations=2)
+        mask = cv2.dilate(mask, None, iterations=2)
 
         cv2.imshow("Frame", mask)
 
@@ -86,4 +86,7 @@ def main():
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
+    if (len(sys.argv) != 2):
+        print('Programa requer um video como argumento. Saindo.')
+        sys.exit(1)
     main()

@@ -36,8 +36,7 @@ def img_color_threshold(img, boundaries):
     output = cv2.bitwise_and(img, img, mask = mask)
 
     cv2.imshow("images", np.hstack([img, output]))
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        sys.exit(1)
+    cv2.waitKey(0)
 
     return output
 
@@ -50,27 +49,20 @@ def show_images(*imgs):
         
 
 def main():
-    #img = cv2.imread(sys.argv[1])
-    boundaries_blue = get_boundaries_from_range(color['blue'], 80, 80)
+    img = cv2.imread(sys.argv[1])
+    boundaries_blue = get_boundaries_from_range(color['blue'], 50, 50)
     boundaries_red = get_boundaries_from_range(color['red'], 50, 50)
     boundaries_yellow = get_boundaries_from_range(color['yellow'], 50, 50)
 
-    #threshold = img_color_threshold(img, boundaries_yellow)
-    #threshold = img_color_threshold(img, boundaries_blue)
-    #threshold = img_color_threshold(img, boundaries_red)
-    
+    threshold = img_color_threshold(img, boundaries_yellow)
+    threshold = img_color_threshold(img, boundaries_blue)
+    threshold = img_color_threshold(img, boundaries_red)
 
-    camera = cv2.VideoCapture(0)
-
-    while True:
-        ret, frame = camera.read()
-
-        threshold = img_color_threshold(frame, boundaries_blue)
-
-        #cv2.imshow('frame', frame)
-        #if cv2.waitKey(1) & 0xFF == ord('q'):
-            #break
 
 
 if __name__ == '__main__':
+    if (len(sys.argv) != 2):
+        print('Por favor, selecione o caminho de uma imagem como argumento.')
+        print('Em "/data" tem alguns ;)')
+        sys.exit(1)
     main()
