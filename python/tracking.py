@@ -56,7 +56,7 @@ def main(videoSource):
         frame = imutils.resize(frame, width=600)
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-        lower, upper = get_HSV_boundaries_from_RGB(color['blue'], 40)
+        lower, upper = get_HSV_boundaries_from_RGB(color[sys.argv[2]], 40)
 
         mask = cv2.inRange(hsv, lower, upper)
         mask = cv2.erode(mask, None, iterations=2)
