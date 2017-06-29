@@ -23,7 +23,8 @@ int finalD = 48;
 int finalE = 48;
 
 float Kp =   .9;                                // PID proportional control Gain
-float Kd =    .1;    
+float Kd =    .1;
+float ki = kp/20;
 int pwmD, pwmE;
 
 void setup(){
@@ -100,9 +101,21 @@ void loop(){
 int updatePid(int command, int targetValue, int currentValue)   {             // compute PWM value
 float pidTerm = 0;                                                            // PID correction
 int error=0;                                  
-static int last_error=0;                            
+static int last_error=0;
+static int error_history[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+static int last_error_history = 0;
+static int error_history_sum = 0;
+int current_error_pos;
+
+
  error = abs(targetValue) - abs(currentValue);
- pidTerm = (Kp * error) + (Kd * (error - last_error));                            
+ 
+ current_error_pos = (last_error_history + 1)%20; // posicao a ser substituida
+ error_history_sum += error - error_history_sum[current_error_pos]; // subtrai valor mais antigo e soma atual
+ error_history[current_error_pos] = error; // guarda erro atual no vetor;
+ last_error_history = current_error_history; // atualiza a posicao do ultimo erro recebido
+ 
+ pidTerm = (Kp * error) + (Kd * (error - last_error)) + (ki * (error_history_sum));                            
  last_error = error;
  return constrain(command + int(pidTerm), 0, 255);
 }
