@@ -7,38 +7,38 @@ Roda::Roda(int dirPinA, int dirPinB, int PWMpin)
 	pinMode(dirPinB, OUTPUT);
 	pinMode(PWMpin, OUTPUT);
 
-	this.dirPinA = dirPinA;
-	this.dirPinB = dirPinB;
-	this.PWMpin = PWMpin;
+	this->dirPinA = dirPinA;
+	this->dirPinB = dirPinB;
+	this->PWMpin = PWMpin;
 	pid.SetMode(AUTOMATIC);
-	pid.SetSapleTime(0);
+	pid.SetSampleTime(0);
 	pid.SetOutputLimits(0,255);
-	encoder.Encoder()
+	encoder.reset();
 }
 
 void Roda::movimenta(){
 
 	rpmInput = encoder.rpm();
 	pid.Compute();
-	analogWrite(_PWMpin, pwmOutput);
+	analogWrite(PWMpin, pwmOutput);
 }
 
 
-void Roda::setTunings(float kp, ki, kd) {
-	this.kp = kp;
-	this.ki = ki;
-	this.kd = kd;
-	pid.setTunings(kp, ki, kd)
+void Roda::setTunings(double kp, double ki, double kd) {
+	this->kp = kp;
+	this->ki = ki;
+	this->kd = kd;
+	pid.SetTunings(kp, ki, kd);
 }
 
 void Roda::setDir(int dir) {
 
 	if (dir == 1)
 	{
-    	digitalWrite(_dirPinB, LOW);
-		digitalWrite(_dirPinA, HIGH);
+    	digitalWrite(dirPinB, LOW);
+		digitalWrite(dirPinA, HIGH);
 	} else {
-		digitalWrite(_dirPinA, LOW);
-    	digitalWrite(_dirPinB, HIGH);
+		digitalWrite(dirPinA, LOW);
+    	digitalWrite(dirPinB, HIGH);
 	}
 }

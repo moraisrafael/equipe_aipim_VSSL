@@ -6,6 +6,9 @@
 Roda RodaEsquerda(MTR_AIN1, MTR_AIN2, MTR_PWMA);
 Roda RodaDireita(MTR_BIN2, MTR_BIN1, MTR_PWMB);
 
+void updateEsquerda();
+void updateDireita();
+
 void setup(void) {
   Serial.begin(57600);
   Serial.println("Executando teste de movimento");
@@ -21,12 +24,20 @@ void setup(void) {
   digitalWrite(MTR_AIN2, LOW);
   digitalWrite(MTR_BIN2, HIGH);
 
-  RodaEsquerda.Setpoint = 15;
-  RodaDireita.Setpoint = 15;
+  RodaEsquerda.rpmSetpoint = 30;
+  RodaDireita.rpmSetpoint = 30;
 
 }
 
+unsigned long ultimo_tempo = 0;
+
 void loop() {
+        if (millis() - ultimo_tempo >= 10) {
+          RodaDireita.movimenta();
+          RodaEsquerda.movimenta();
+        }
+        ultimo_tempo = millis();
+
 	if (Serial.available()) {
 		char c;
 		double kp, ki, kd;
@@ -37,10 +48,10 @@ void loop() {
 		switch (c) {
 			case ('r'):
 				Serial.print("ultimo rpm = ");
-				Serial.println(RodaEsquerda.pwmSetpoint);
+				Serial.println(RodaEsquerda.rpmSetpoint);
 				Serial.print("mudar para rpm =");
-				RodaDireita.Serial.pwmSetpoint = RodaEsquerda.Serial.pwmSetpoint = Serial.paseFloat();
-				Serial.println(RodaEsquerda.pwmSetpoint);
+				RodaDireita.rpmSetpoint = RodaEsquerda.rpmSetpoint = Serial.parseFloat();
+				Serial.println(RodaEsquerda.rpmSetpoint);
 				break;
 			case ('p'):
 				Serial.print("ultima configuracao do PID: kp=");
@@ -50,22 +61,22 @@ void loop() {
 				Serial.print(" kd=");
 				Serial.println(RodaEsquerda.kd);
 				Serial.print("mudar para: kp=");
-				kp = Serial.paseFloat();
+				kp = Serial.parseFloat();
 				Serial.print(kp);
 				Serial.print(" ki=");
-				ki = Serial.paseFloat();
+				ki = Serial.parseFloat();
 				Serial.print(ki);
 				Serial.print(" kd=");
-				kd = Serial.paseFloat();
+				kd = Serial.parseFloat();
 				Serial.println(kd);
-				RodaEsquerda.SetTunings(kp,ki,kd):
-				RodaDireita.SetTunings(kp,ki,kd):
-				break
+				RodaEsquerda.setTunings(kp,ki,kd);
+				RodaDireita.setTunings(kp,ki,kd);
+				break;
 			default:
 				Serial.println("r - mudar rpm");
-				Serial.println("p - mudar configuracao do PID);
+				Serial.println("p - mudar configuracao do PID");
 		}
-		Interrupts();
+		interrupts();
 	}
 }
 
@@ -74,24 +85,26 @@ void updateEsquerda(){
   RodaEsquerda.movimenta();
   
   Serial.print("esquerda tempo:");
-  Serial.print(RodaEsquerda.encoder.ultimoTempo);
-  Serial.print("int:");
+  Serial.println(RodaEsquerda.encoder.ultimoTempo);
+  /*Serial.print("int:");
   Serial.print(RodaEsquerda.encoder.ultimoIntervalo);
   Serial.print("rpm:");
   Serial.print(RodaEsquerda.encoder.rpm());
   Serial.print("pwm:");
-  Serial.print(RodaEsquerda.pwmOutput);
+  Serial.println(RodaEsquerda.pwmOutput);*/
 }
 void updateDireita(){
   RodaDireita.encoder.update();
+  noInterrupts();
   RodaDireita.movimenta();
+  interrupts();
 
   Serial.print("direita tempo:");
-  Serial.print(RodaEsquerda.encoder.ultimoTempo);
-  Serial.print("int:");
+  Serial.println(RodaEsquerda.encoder.ultimoTempo);
+  /*Serial.print("int:");
   Serial.print(RodaEsquerda.encoder.ultimoIntervalo);
   Serial.print("rpm:");
   Serial.print(RodaEsquerda.encoder.rpm());
   Serial.print("pwm:");
-  Serial.print(RodaEsquerda.pwmOutput);
+  Serial.println(RodaEsquerda.pwmOutput);*/
 }

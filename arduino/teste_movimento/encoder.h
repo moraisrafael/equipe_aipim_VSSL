@@ -5,13 +5,13 @@
 #include "Arduino.h"
 class Encoder
 {
-  public:
-	int count;
-	unsigned long ultimoTempo;
-	unsigned long ultimoIntevalo;
-    void update();
-    float rpm();
-	Encoder();
-
+public:
+  int count;
+  unsigned long ultimoTempo, ultimoIntervalo;
+  void update();
+  float rpm();
+  Encoder();
+  void reset();
 };
 #endif
+

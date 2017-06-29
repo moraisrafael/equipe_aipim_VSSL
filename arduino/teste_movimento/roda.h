@@ -21,7 +21,7 @@ class Roda
   	PID pid;
     Roda(int dirPinA, int dirPinB, int PWMpin);
     void movimenta();
-    void setTunings(float kp, ki, kd);
+    void setTunings(double kp, double ki, double kd);
     void setDir(int dir);
   private:
   	int dirPinA, dirPinB, PWMpin;

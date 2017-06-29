@@ -2,23 +2,29 @@
 #include "encoder.h"
 
 void Encoder::update() {
-	unsigned long tempoAtual;
+  unsigned long tempoAtual;
 
-	noInterrupts();
-	tempoAtual = millis();
-	ultimoIntervalo = tempoAtual - ultimoTempo;
-	ultimoTempo = tempoAtual;
-	count++;
-	interrupts();
+  noInterrupts();
+  //tempoAtual = micros();
+  ultimoIntervalo = micros() - ultimoTempo;
+  ultimoTempo = micros();
+  count++;
+  interrupts();
+  Serial.println(ultimo_tempo);
 }
 
 float Encoder::rpm() {
-	
-  return 60000000.0 / (ulimoIntervalo * 48.0); //um minuto em us dividido pelo tempo que a roda leva pra dar uma volta em us
+
+  return 60000000.0 / (ultimoIntervalo * 48.0); //um minuto em us dividido pelo tempo que a roda leva pra dar uma volta em us
+}
+
+void Encoder::reset() {
+  ultimoTempo = micros();
+  ultimoIntervalo = 0;
+  count = 0;
 }
 
 Encoder::Encoder() {
-	ultimoTempo = micros();
-	ultimoIntervalo = 0;
-	count = 0;
+  reset();
 }
+
